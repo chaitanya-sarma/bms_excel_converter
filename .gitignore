@@ -5,4 +5,5 @@
 BrAPIApp.iml
 RemoteSystemsTempFiles
 *.class
-bms_excel_converter/target
+target
+.settings

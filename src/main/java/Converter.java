@@ -1,15 +1,14 @@
-package excelReader.excelReader;
 
+
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -18,96 +17,92 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 public class Converter {
 
-	public static void convert(String fileName, String siteYear, String siteName) {
-		String outputFile = fileName.substring(0, fileName.lastIndexOf(".")) + "_processed"
-				+ fileName.substring(fileName.lastIndexOf("."));
-		HSSFWorkbook outputWorkbook = new HSSFWorkbook();
-		HSSFSheet outputSheet = outputWorkbook.createSheet();
+	public static String convert(String inputFileName, String outputFileName, int year, String siteName) {
+		String status = "Success!!";
+		if (!new File(inputFileName).isFile()) {
+			status = "Given input file: " + inputFileName + " is not valid.";
+			return status;
+		}
+		
+		if (!outputFileName.substring(outputFileName.lastIndexOf(".")).equals(".csv")) {
+			status = "File-name should end with .csv.";
+			return status;
+		}
+		
 		ArrayList<FileLineEntry> outputFormat = new ArrayList<FileLineEntry>();
-		outputFormat.add(new FileLineEntry("SiteYear", false, siteYear));
+		outputFormat.add(new FileLineEntry("SiteYear", false, Integer.toString(year)));
+		if (siteName.isEmpty()) {
+			status = "Please enter Site-Name";
+			return status;
+		}
 		outputFormat.add(new FileLineEntry("SiteName", false, siteName));
 
-		prepareOutputLineFormat(fileName, outputFormat);
-
+		prepareOutputLineFormat(inputFileName, outputFormat);
 		try {
-			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
-			Sheet datatypeSheet = workbook.getSheetAt(1);
+			BufferedWriter tempFileBufferedWriter = new BufferedWriter(new FileWriter(outputFileName));
+			writeHeader(outputFormat, tempFileBufferedWriter);
 
-			int outputRowNum = 0;
-			Row outputRow = outputSheet.createRow(outputRowNum++);
-			int colNo = 0;
-			// Write the first Line
-			for (FileLineEntry outputHeader : outputFormat) {
-				Cell outputCell = outputRow.createCell(colNo++);
-				outputCell.setCellValue(outputHeader.getEntryName());
-			}
+			// Write rest of lines
+			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(inputFileName)));
+			Sheet datatypeSheet = workbook.getSheetAt(1);
 			Iterator<Row> iterator = datatypeSheet.iterator();
+			// Ignore the first line as it is header information.
 			if (iterator.hasNext()) {
 				iterator.next();
 			}
 			while (iterator.hasNext()) {
-				colNo = 0;
-				outputRow = outputSheet.createRow(outputRowNum++);
 				Row dataRow = iterator.next();
 				Iterator<Cell> cellIterator = dataRow.cellIterator();
 				ArrayList<String> row = new ArrayList<String>();
 				processRow(cellIterator, row);
+				StringBuilder outputLine = new StringBuilder();
 				if (row.isEmpty())
 					break;
-				int i =0;
-				for (FileLineEntry outputEntry : outputFormat) {
-					Cell outputCell = outputRow.createCell(colNo++);
-					if (outputEntry.isIndex) {
-						if (outputEntry.getValue().equals("-1")) {
-							outputCell.setCellValue("");
+				else {
+					for (FileLineEntry outputEntry : outputFormat) {
+						if (outputEntry.isIndex && outputEntry.getValue() != "-1") {
+							outputLine.append(row.get((int) Float.parseFloat(outputEntry.getValue())));
+							outputLine.append(",");
+						} else if (outputEntry.getValue() != "-1") {
+							outputLine.append(outputEntry.getValue());
+							outputLine.append(",");
 						} else {
-							
-							outputCell.setCellValue(row.get((int) Float.parseFloat(outputEntry.getValue())));
-							if(i == 0){
-								outputCell.setCellType(HSSFCell.CELL_TYPE_NUMERIC);
-							}
+							outputLine.append(",");
 						}
-					} else {
-						
-						try {
-							   Double value = Double.parseDouble(outputEntry.getValue());
-							   outputCell.setCellType(HSSFCell.CELL_TYPE_NUMERIC);
-							   outputCell.setCellValue(value.doubleValue());
-							}
-							catch(NumberFormatException nfe) {
-							   outputCell.setCellValue(outputEntry.getValue());
-							}
-						
-						outputCell.setCellValue(outputEntry.getValue());
 					}
-					i++;
+					tempFileBufferedWriter.write(outputLine.toString());
+					tempFileBufferedWriter.write("\n");
 				}
 
 			}
-			FileOutputStream outputStream = new FileOutputStream(outputFile);
-			outputWorkbook.write(outputStream);
-			outputWorkbook.close();
+			tempFileBufferedWriter.flush();
+			tempFileBufferedWriter.close();
 			workbook.close();
-
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
-			e.printStackTrace();
 		}
+		return status;
 	}
 
-	public static boolean isNumeric(String str)
-	  {
-	    try
-	    {
-	      double d = Double.parseDouble(str);
-	    }
-	    catch(NumberFormatException nfe)
-	    {
-	      return false;
-	    }
-	    return true;
-	  }
+	private static void writeHeader(ArrayList<FileLineEntry> outputFormat, BufferedWriter tempFileBufferedWriter)
+			throws IOException {
+		StringBuilder outputHeaderLine = new StringBuilder();
+
+		// Print the first line.
+		for (FileLineEntry outputHeader : outputFormat) {
+			outputHeaderLine.append(outputHeader.getEntryName());
+			outputHeaderLine.append(",");
+		}
+		tempFileBufferedWriter.write(outputHeaderLine.toString());
+		tempFileBufferedWriter.write("\n");
+	}
+
+	/**
+	 * Process sheet 1.
+	 * 
+	 * @param fileName
+	 * @param outputFormat
+	 */
 	private static void prepareOutputLineFormat(String fileName, ArrayList<FileLineEntry> outputFormat) {
 		try {
 
@@ -116,10 +111,6 @@ public class Converter {
 			requiredFieldsFromFirstSheet.add("TRIAL_INSTANCE");
 			requiredFieldsFromFirstSheet.add("FACTOR");
 			requiredFieldsFromFirstSheet.add("VARIATE");
-			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
-			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
-
-			Iterator<Row> iterator = datatypeSheet.iterator();
 
 			outputFormat.add(new FileLineEntry("TrialType", false, "T/N")); // 2
 			outputFormat.add(new FileLineEntry("TrialNumber", false, "-1")); // 3
@@ -130,11 +121,17 @@ public class Converter {
 			outputFormat.add(new FileLineEntry("GenoType", true, "-1")); // 8
 			outputFormat.add(new FileLineEntry("Pedigree", true, "-1")); // 9
 
+			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
+			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
+
+			Iterator<Row> iterator = datatypeSheet.iterator();
+
 			int factorColumnsNum = 0;
 			while (iterator.hasNext()) {
 				Row nextRow = iterator.next();
 				Iterator<Cell> cellIterator = nextRow.cellIterator();
 				ArrayList<String> row = new ArrayList<String>();
+				// Read row and populate it into Row
 				processRow(cellIterator, row);
 				if (!row.isEmpty()) {
 					if (row.get(0).equalsIgnoreCase(requiredFieldsFromFirstSheet.get(0))) {
@@ -164,6 +161,13 @@ public class Converter {
 
 	}
 
+	/**
+	 * Process the variate from sheet 1.
+	 * 
+	 * @param iterator
+	 * @param outputFormat
+	 * @param factorColumnsNum
+	 */
 	private static void processVariate(Iterator<Row> iterator, ArrayList<FileLineEntry> outputFormat,
 			int factorColumnsNum) {
 		while (iterator.hasNext()) {
@@ -179,7 +183,13 @@ public class Converter {
 
 	}
 
-	// Read all the next lines till you reach an empty line
+	/**
+	 * Read the Factor data from sheet 1.
+	 * 
+	 * @param iterator
+	 * @param outputFormat
+	 * @return
+	 */
 	private static int processFactor(Iterator<Row> iterator, ArrayList<FileLineEntry> outputFormat) {
 		ArrayList<String> requiredFieldsFromFactor = new ArrayList<String>();
 		requiredFieldsFromFactor.add("PLOT_NO");
@@ -217,6 +227,9 @@ public class Converter {
 		return noOfFactor;
 	}
 
+	/*
+	 * Read row and populate it into Row
+	 */
 	@SuppressWarnings("deprecation")
 	private static void processRow(Iterator<Cell> cellIterator, ArrayList<String> row) {
 		while (cellIterator.hasNext()) {
