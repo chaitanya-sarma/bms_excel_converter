@@ -5,7 +5,6 @@ import java.awt.Frame;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.net.URL;
 
 import javax.swing.JButton;
@@ -106,7 +105,7 @@ public class Application extends Frame {
 
 		final JComboBox<Integer> comboBox = new JComboBox<Integer>();
 		int[] years = { 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015,
-				2016, 2017 };
+				2016, 2017, 2018,2019,2020};
 		for (int i = 0; i < years.length; i++) {
 			comboBox.addItem(years[i]);
 		}

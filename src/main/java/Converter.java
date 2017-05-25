@@ -1,5 +1,4 @@
 
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,7 +15,6 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
 public class Converter {
-
 	public static String convert(String inputFileName, String outputFileName, int year, String siteName) {
 		String status = "Success!!";
 		if (!new File(inputFileName).isFile()) {
@@ -30,7 +28,10 @@ public class Converter {
 		}
 		
 		ArrayList<FileLineEntry> outputFormat = new ArrayList<FileLineEntry>();
-		outputFormat.add(new FileLineEntry("SiteYear", false, Integer.toString(year)));
+		if(year == 0)
+				outputFormat.add(new FileLineEntry("SiteYear", false, Integer.toString(2000)));
+			else
+				outputFormat.add(new FileLineEntry("SiteYear", false, Integer.toString(year)));	
 		if (siteName.isEmpty()) {
 			status = "Please enter Site-Name";
 			return status;
@@ -45,35 +46,43 @@ public class Converter {
 			// Write rest of lines
 			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(inputFileName)));
 			Sheet datatypeSheet = workbook.getSheetAt(1);
-			Iterator<Row> iterator = datatypeSheet.iterator();
-			// Ignore the first line as it is header information.
-			if (iterator.hasNext()) {
-				iterator.next();
-			}
-			while (iterator.hasNext()) {
-				Row dataRow = iterator.next();
-				Iterator<Cell> cellIterator = dataRow.cellIterator();
-				ArrayList<String> row = new ArrayList<String>();
-				processRow(cellIterator, row);
-				StringBuilder outputLine = new StringBuilder();
-				if (row.isEmpty())
-					break;
-				else {
-					for (FileLineEntry outputEntry : outputFormat) {
-						if (outputEntry.isIndex && outputEntry.getValue() != "-1") {
-							outputLine.append(row.get((int) Float.parseFloat(outputEntry.getValue())));
-							outputLine.append(",");
-						} else if (outputEntry.getValue() != "-1") {
-							outputLine.append(outputEntry.getValue());
-							outputLine.append(",");
-						} else {
-							outputLine.append(",");
-						}
-					}
-					tempFileBufferedWriter.write(outputLine.toString());
-					tempFileBufferedWriter.write("\n");
+	
+			int noOfCellsPerRow = 0;
+			boolean isFirstRow = true;
+			for(Row dataRow : datatypeSheet) {
+				
+				if(isFirstRow){
+					/*
+					 * As the first row is a header, the assumption is that every column need to have a header.
+					 * CellIterator skips the cells without any format or any data.
+					 * So by counting the no of headers we are sure to handle the blank spaces.
+					 */
+					noOfCellsPerRow = dataRow.getLastCellNum();
+					isFirstRow = false;
 				}
-
+				else{
+					ArrayList<String> row = new ArrayList<String>();
+					processDataSheet(dataRow, row, noOfCellsPerRow);
+					
+					StringBuilder outputLine = new StringBuilder();
+					if (row.isEmpty())
+						break;
+					else {
+						for (FileLineEntry outputEntry : outputFormat) {
+							if (outputEntry.isIndex && outputEntry.getValue() != "-1") {	
+								outputLine.append(row.get((int) Float.parseFloat(outputEntry.getValue())));
+								outputLine.append(",");
+							} else if (outputEntry.getValue() != "-1") {
+								outputLine.append(outputEntry.getValue());
+								outputLine.append(",");
+							} else {
+								outputLine.append(",");
+							}
+						}
+						tempFileBufferedWriter.write(outputLine.toString());
+						tempFileBufferedWriter.write("\n");
+					}
+				}
 			}
 			tempFileBufferedWriter.flush();
 			tempFileBufferedWriter.close();
@@ -82,6 +91,37 @@ public class Converter {
 		} catch (IOException e) {
 		}
 		return status;
+	}
+
+	@SuppressWarnings("deprecation")
+	private static void processDataSheet(Row dataRow, ArrayList<String> row, int noOfCellsPerRow) {
+		for(int i =0 ; i < noOfCellsPerRow;i++){
+			 if( dataRow.getCell(i) == null ){
+                 row.add("");
+             } else {
+            	 switch (dataRow.getCell(i).getCellType()) {
+            	 case Cell.CELL_TYPE_STRING:
+     				row.add(dataRow.getCell(i).getStringCellValue());
+     				break;
+     			case Cell.CELL_TYPE_BOOLEAN:
+     				row.add(Boolean.toString(dataRow.getCell(i).getBooleanCellValue()));
+     				break;
+     			case Cell.CELL_TYPE_NUMERIC:
+     	        	 Double value = dataRow.getCell(i).getNumericCellValue();
+                	 // If numeric check whether it is an integer/(float/double).
+     	        	 if(value == Math.round(value)){
+     	        		row.add(Long.toString(Math.round(value)));
+                	 }else{
+          				row.add(Double.toString(value));
+                	 }
+     				break;
+     			case Cell.CELL_TYPE_BLANK:
+     				row.add("");
+     				break;
+
+            	 }
+             }
+		}
 	}
 
 	private static void writeHeader(ArrayList<FileLineEntry> outputFormat, BufferedWriter tempFileBufferedWriter)
@@ -99,6 +139,7 @@ public class Converter {
 
 	/**
 	 * Process sheet 1.
+	 * Read complete sheet to identify the required information.
 	 * 
 	 * @param fileName
 	 * @param outputFormat
@@ -120,6 +161,7 @@ public class Converter {
 			outputFormat.add(new FileLineEntry("Replicate", true, "-1")); // 7
 			outputFormat.add(new FileLineEntry("GenoType", true, "-1")); // 8
 			outputFormat.add(new FileLineEntry("Pedigree", true, "-1")); // 9
+			outputFormat.add(new FileLineEntry("ENTRY_TYPE", true, "-1"));//10
 
 			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
 			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
@@ -129,10 +171,9 @@ public class Converter {
 			int factorColumnsNum = 0;
 			while (iterator.hasNext()) {
 				Row nextRow = iterator.next();
-				Iterator<Cell> cellIterator = nextRow.cellIterator();
 				ArrayList<String> row = new ArrayList<String>();
 				// Read row and populate it into Row
-				processRow(cellIterator, row);
+				processRow(nextRow, row);
 				if (!row.isEmpty()) {
 					if (row.get(0).equalsIgnoreCase(requiredFieldsFromFirstSheet.get(0))) {
 						FileLineEntry flEntry = outputFormat.get(2);
@@ -172,9 +213,8 @@ public class Converter {
 			int factorColumnsNum) {
 		while (iterator.hasNext()) {
 			Row nextRow = iterator.next();
-			Iterator<Cell> cellIterator = nextRow.cellIterator();
 			ArrayList<String> row = new ArrayList<String>();
-			processRow(cellIterator, row);
+			processRow(nextRow, row);
 			if (row.size() == 0) {
 				break;
 			}
@@ -196,12 +236,12 @@ public class Converter {
 		requiredFieldsFromFactor.add("Rep");
 		requiredFieldsFromFactor.add("DESIGNATION");
 		requiredFieldsFromFactor.add("CROSS");
+		requiredFieldsFromFactor.add("ENTRY_TYPE");
 		int noOfFactor = 0;
 		while (iterator.hasNext()) {
 			Row nextRow = iterator.next();
-			Iterator<Cell> cellIterator = nextRow.cellIterator();
 			ArrayList<String> row = new ArrayList<String>();
-			processRow(cellIterator, row);
+			processRow(nextRow, row);
 			if (row.size() == 0) {
 				break;
 			}
@@ -221,7 +261,10 @@ public class Converter {
 				FileLineEntry flEntry = outputFormat.get(9);
 				flEntry.setValue(Integer.toString(noOfFactor));
 			}
-
+			if (requiredFieldsFromFactor.get(4).equalsIgnoreCase(row.get(0))) {
+				FileLineEntry flEntry = outputFormat.get(10);
+				flEntry.setValue(Integer.toString(noOfFactor));
+			}
 			noOfFactor++;
 		}
 		return noOfFactor;
@@ -231,9 +274,8 @@ public class Converter {
 	 * Read row and populate it into Row
 	 */
 	@SuppressWarnings("deprecation")
-	private static void processRow(Iterator<Cell> cellIterator, ArrayList<String> row) {
-		while (cellIterator.hasNext()) {
-			Cell cell = cellIterator.next();
+	private static void processRow(Row nextRow, ArrayList<String> row) {
+		for (Cell cell: nextRow) {
 			switch (cell.getCellType()) {
 			case Cell.CELL_TYPE_STRING:
 				row.add(cell.getStringCellValue());
@@ -244,9 +286,11 @@ public class Converter {
 			case Cell.CELL_TYPE_NUMERIC:
 				row.add(String.valueOf(cell.getNumericCellValue()));
 				break;
+			case Cell.CELL_TYPE_BLANK:
+				row.add(null);
+				break;
 			}
 		}
-
 	}
 
 }
