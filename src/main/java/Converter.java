@@ -162,6 +162,7 @@ public class Converter {
 			outputFormat.add(new FileLineEntry("GenoType", true, "-1")); // 8
 			outputFormat.add(new FileLineEntry("Pedigree", true, "-1")); // 9
 			outputFormat.add(new FileLineEntry("ENTRY_TYPE", true, "-1"));//10
+			outputFormat.add(new FileLineEntry("PLOT_ID", true, "-1"));//11
 
 			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
 			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
@@ -237,6 +238,7 @@ public class Converter {
 		requiredFieldsFromFactor.add("DESIGNATION");
 		requiredFieldsFromFactor.add("CROSS");
 		requiredFieldsFromFactor.add("ENTRY_TYPE");
+		requiredFieldsFromFactor.add("PLOT_ID");
 		int noOfFactor = 0;
 		while (iterator.hasNext()) {
 			Row nextRow = iterator.next();
@@ -265,6 +267,11 @@ public class Converter {
 				FileLineEntry flEntry = outputFormat.get(10);
 				flEntry.setValue(Integer.toString(noOfFactor));
 			}
+			if (requiredFieldsFromFactor.get(5).equalsIgnoreCase(row.get(0))) {
+				FileLineEntry flEntry = outputFormat.get(11);
+				flEntry.setValue(Integer.toString(noOfFactor));
+			}
+
 			noOfFactor++;
 		}
 		return noOfFactor;
