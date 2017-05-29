@@ -3,7 +3,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,9 +13,11 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
-public class Converter {
+public class TemplateToFieldScorerConverter {
+	private static final String FAILURE = "Failure!!";
+	private static String status = FAILURE;
+	
 	public static String convert(String inputFileName, String outputFileName, int year, String siteName) {
-		String status = "Success!!";
 		if (!new File(inputFileName).isFile()) {
 			status = "Given input file: " + inputFileName + " is not valid.";
 			return status;
@@ -44,10 +45,12 @@ public class Converter {
 		outputFormat.add(new FileLineEntry("SiteName", false, siteName));
 
 		prepareOutputLineFormat(inputFileName, outputFormat);
+		if(status != FAILURE)return status;
 		try {
 			BufferedWriter tempFileBufferedWriter = new BufferedWriter(new FileWriter(outputFileName));
 			writeHeader(outputFormat, tempFileBufferedWriter);
-
+			if(status != FAILURE)return status;
+			
 			// Write rest of lines
 			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(inputFileName)));
 			Sheet datatypeSheet = workbook.getSheetAt(1);
@@ -92,8 +95,9 @@ public class Converter {
 			tempFileBufferedWriter.flush();
 			tempFileBufferedWriter.close();
 			workbook.close();
-		} catch (FileNotFoundException e) {
+			status = "Success!!";
 		} catch (IOException e) {
+			status = "Please check the template file and retry.";
 		}
 		return status;
 	}
@@ -129,8 +133,7 @@ public class Converter {
 		}
 	}
 
-	private static void writeHeader(ArrayList<FileLineEntry> outputFormat, BufferedWriter tempFileBufferedWriter)
-			throws IOException {
+	private static void writeHeader(ArrayList<FileLineEntry> outputFormat, BufferedWriter tempFileBufferedWriter){
 		StringBuilder outputHeaderLine = new StringBuilder();
 
 		// Print the first line.
@@ -138,8 +141,12 @@ public class Converter {
 			outputHeaderLine.append(outputHeader.getEntryName());
 			outputHeaderLine.append(",");
 		}
-		tempFileBufferedWriter.write(outputHeaderLine.toString());
-		tempFileBufferedWriter.write("\n");
+		try {
+			tempFileBufferedWriter.write(outputHeaderLine.toString());
+			tempFileBufferedWriter.write("\n");
+		} catch (IOException e) {
+			status = "Exception in writing header to FieldScorer.\n Delete field scorer file and try again.";
+		}
 	}
 
 	/**
@@ -179,7 +186,7 @@ public class Converter {
 				Row nextRow = iterator.next();
 				ArrayList<String> row = new ArrayList<String>();
 				// Read row and populate it into Row
-				processRow(nextRow, row);
+				Util.processRow(nextRow, row);
 				if (!row.isEmpty()) {
 					if (row.get(0).equalsIgnoreCase(requiredFieldsFromFirstSheet.get(0))) {
 						FileLineEntry flEntry = outputFormat.get(2);
@@ -200,10 +207,8 @@ public class Converter {
 				}
 			}
 			hssfWorkbook.close();
-		} catch (FileNotFoundException e1) {
-			e1.printStackTrace();
 		} catch (IOException e) {
-			e.printStackTrace();
+			status = "Issue with reading the Description sheet.\n Please check it.!!";
 		}
 
 	}
@@ -220,7 +225,7 @@ public class Converter {
 		while (iterator.hasNext()) {
 			Row nextRow = iterator.next();
 			ArrayList<String> row = new ArrayList<String>();
-			processRow(nextRow, row);
+			Util.processRow(nextRow, row);
 			if (row.size() == 0) {
 				break;
 			}
@@ -248,7 +253,7 @@ public class Converter {
 		while (iterator.hasNext()) {
 			Row nextRow = iterator.next();
 			ArrayList<String> row = new ArrayList<String>();
-			processRow(nextRow, row);
+			Util.processRow(nextRow, row);
 			if (row.size() == 0) {
 				break;
 			}
@@ -281,30 +286,6 @@ public class Converter {
 		}
 		return noOfFactor;
 	}
-
-	/*
-	 * Read row and populate it into Row
-	 */
-	@SuppressWarnings("deprecation")
-	private static void processRow(Row nextRow, ArrayList<String> row) {
-		for (Cell cell: nextRow) {
-			switch (cell.getCellType()) {
-			case Cell.CELL_TYPE_STRING:
-				row.add(cell.getStringCellValue());
-				break;
-			case Cell.CELL_TYPE_BOOLEAN:
-				row.add(String.valueOf(cell.getBooleanCellValue()));
-				break;
-			case Cell.CELL_TYPE_NUMERIC:
-				row.add(String.valueOf(cell.getNumericCellValue()));
-				break;
-			case Cell.CELL_TYPE_BLANK:
-				row.add(null);
-				break;
-			}
-		}
-	}
-
 }
 
 class FileLineEntry {
