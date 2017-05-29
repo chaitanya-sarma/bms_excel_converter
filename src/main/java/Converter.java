@@ -21,7 +21,12 @@ public class Converter {
 			status = "Given input file: " + inputFileName + " is not valid.";
 			return status;
 		}
-		
+
+		if (!inputFileName.substring(inputFileName.lastIndexOf(".")).equals(".xls")) {
+			status = "Please select the template file.\nFile-name should end with .xls.";
+			return status;
+		}
+
 		if (!outputFileName.substring(outputFileName.lastIndexOf(".")).equals(".csv")) {
 			status = "File-name should end with .csv.";
 			return status;
