@@ -46,6 +46,7 @@ public class FieldScorerToTemplateConverter {
 
 		indexesRequired(templateFileName, VariateList);
 		if(status != FAILURE)return status;
+		findIndexesInTemplate(VariateList, templateFileName);
 		findIndexes(VariateList, fieldScorerFileName);
 		if(status != FAILURE)return status;
 		getPlot_ID()
@@ -103,35 +104,30 @@ public class FieldScorerToTemplateConverter {
 		return status;
 	}
 
-	@SuppressWarnings("deprecation")
-	private static void processDataSheet(Row dataRow, ArrayList<String> row, int noOfCellsPerRow) {
-		for (int i = 0; i < noOfCellsPerRow; i++) {
-			if (dataRow.getCell(i) == null) {
-				row.add("");
-			} else {
-				switch (dataRow.getCell(i).getCellType()) {
-				case Cell.CELL_TYPE_STRING:
-					row.add(dataRow.getCell(i).getStringCellValue());
-					break;
-				case Cell.CELL_TYPE_BOOLEAN:
-					row.add(Boolean.toString(dataRow.getCell(i).getBooleanCellValue()));
-					break;
-				case Cell.CELL_TYPE_NUMERIC:
-					Double value = dataRow.getCell(i).getNumericCellValue();
-					// If numeric check whether it is an integer/(float/double).
-					if (value == Math.round(value)) {
-						row.add(Long.toString(Math.round(value)));
-					} else {
-						row.add(Double.toString(value));
-					}
-					break;
-				case Cell.CELL_TYPE_BLANK:
-					row.add("");
-					break;
-
-				}
-			}
+	private static void findIndexesInTemplate(ArrayList<VariateEntry> variateList, String templateFileName) {
+		HSSFWorkbook hssfWorkbook;
+		try {
+			hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(templateFileName)));
+		} catch (IOException e) {
+			status = "Cannot open the template file:" + templateFileName;
+			return;
 		}
+		Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
+		ArrayList<String> row = new ArrayList<String>();
+		for (Row dataRow : datatypeSheet) {
+			// Read first header row and populate it into Row
+			Util.processRow(dataRow, row);
+			break;
+		}
+
+		for (int i = 0; i < row.size(); i++) {
+			
+			if(isFieldRequired(row.get(i),variateList)!= -1){
+				
+			}
+				
+		}
+		
 	}
 
 	private static void findIndexes(ArrayList<VariateEntry> variateList, String fieldScorerFileName) {
@@ -161,10 +157,8 @@ public class FieldScorerToTemplateConverter {
 		int variatePos = 0, noOfVariate = variateList.size();
 		for (int i = 0; i < row.size(); i++) {
 			
-			if(isFieldRequired(row.get(i),i,variateList)){
+			isFieldRequired(row.get(i),i,variateList);
 				
-			}
-			
 			
 			
 			
@@ -185,14 +179,13 @@ public class FieldScorerToTemplateConverter {
 		}
 	}
 
-	private static boolean isFieldRequired(String string, int pos, ArrayList<VariateEntry> variateList) {
-		for(VariateEntry entry:variateList){
-			if(entry.getVariateName().equalsIgnoreCase(string)){
-				entry.setIndexInTemplate(pos);
+	private static int isFieldRequired(String string, ArrayList<VariateEntry> variateList) {
+		for(int i = 0; i < variateList.size(); i++){
+			if(variateList.get(i).getVariateName().equalsIgnoreCase(string)){
+				return i;
 			}
 		}
-		return false;
-		
+		return -1;
 	}
 
 	/**
@@ -207,7 +200,7 @@ public class FieldScorerToTemplateConverter {
 		final String VARIATE = "VARIATE";
 		final String FACTOR = "FACTOR";
 		// variateList.add(new VariateEntry("GenoType", -1));
-		variateList.add(new VariateEntry("PLOT_ID", -1));
+		variateList.add(new VariateEntry("PLOT_ID", -1, -1));
 		try {
 
 			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(templateFile)));
@@ -222,11 +215,7 @@ public class FieldScorerToTemplateConverter {
 				// Read row and populate it into Row
 				Util.processRow(nextRow, row);
 				if (!row.isEmpty()) {
-					if (row.get(0).equalsIgnoreCase(FACTOR)) {
-						noOfFactor = processFactor(iterator,variateList);
-					}
-
-					else if (row.get(0).equalsIgnoreCase(VARIATE)) {
+					if (row.get(0).equalsIgnoreCase(VARIATE)) {
 						processVariate(iterator, variateList);
 						readNext = false;
 						break;
@@ -273,7 +262,7 @@ public class FieldScorerToTemplateConverter {
 			if (row.size() == 0) {
 				break;
 			}
-			variateList.add(new VariateEntry(row.get(0), -1)); // 2
+			variateList.add(new VariateEntry(row.get(0), -1, -1));
 		}
 
 	}
@@ -282,11 +271,21 @@ public class FieldScorerToTemplateConverter {
 class VariateEntry {
 	private String variateName;
 	private int indexInTemplate;
-
-	public VariateEntry(String variate, int index) {
+	private int indexInFieldScorer;
+	
+	public VariateEntry(String variate, int indexTemplate, int indexFieldScorer) {
 		super();
 		setVariateName(variate);
-		setIndexInTemplate(index);
+		setIndexInTemplate(indexTemplate);
+		setIndexInFieldScorer(indexFieldScorer);
+	}
+
+	public int getIndexInFieldScorer() {
+		return indexInFieldScorer;
+	}
+
+	public void setIndexInFieldScorer(int indexInFieldScorer) {
+		this.indexInFieldScorer = indexInFieldScorer;
 	}
 
 	public String getVariateName() {
