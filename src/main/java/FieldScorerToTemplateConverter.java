@@ -1,13 +1,12 @@
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -19,6 +18,10 @@ import org.apache.poi.ss.usermodel.Workbook;
 public class FieldScorerToTemplateConverter {
 	private static final String FAILURE = "Failure!!";
 	private static String status = FAILURE;
+
+	public static void main(String[] args) {
+		convert("C:\\Users\\SBDM\\Documents\\Template1.xls", "C:\\Users\\SBDM\\Documents\\Field.csv");
+	}
 
 	public static String convert(String templateFileName, String fieldScorerFileName) {
 
@@ -45,63 +48,115 @@ public class FieldScorerToTemplateConverter {
 		ArrayList<VariateEntry> VariateList = new ArrayList<VariateEntry>();
 
 		indexesRequired(templateFileName, VariateList);
-		if(status != FAILURE)return status;
+		if (status != FAILURE)
+			return status;
 		findIndexesInTemplate(VariateList, templateFileName);
-		findIndexes(VariateList, fieldScorerFileName);
-		if(status != FAILURE)return status;
-		getPlot_ID()
+		findIndexesFromFieldScorer(VariateList, fieldScorerFileName);
+		if (status != FAILURE)
+			return status;
+		HashMap<String, ArrayList<String>> hm = new HashMap<String, ArrayList<String>>();
+		readFieldScorer(fieldScorerFileName, hm, VariateList);
+		System.out.println(hm.size());
+		ArrayList<String> extraPlot_IdTemplate = new ArrayList<String>();
+		writeToTemplateFile(templateFileName, hm, VariateList, extraPlot_IdTemplate);
+		if(!extraPlot_IdTemplate.isEmpty()){
+			status = "Missing plotid's in fieldscorer."+extraPlot_IdTemplate;
+		}
+		if(hm.size() > 0){
+			status = "Extra plotid's in fieldscorer."+hm.keySet();
+		}
+		if (status == FAILURE)
+			status = "SUCCESS!!";
+		return status;
+	}
+
+	private static void writeToTemplateFile(String templateFileName, HashMap<String, ArrayList<String>> hm,
+			ArrayList<VariateEntry> variateList, ArrayList<String> extraPlot_IdTemplate) {
+
+		Workbook workbook = null;
+		Sheet dataSheet = null;
 		try {
-			BufferedWriter templateBufferedWriter = new BufferedWriter(new FileWriter(templateFileName));
-			BufferedReader fieldScorerBufferedReader = new BufferedReader(new FileReader(fieldScorerFileName));
-			
-			// Fill data
-			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(inputFileName)));
-			Sheet datatypeSheet = workbook.getSheetAt(1);
+			workbook = new HSSFWorkbook(new FileInputStream(new File(templateFileName)));
+			dataSheet = workbook.getSheetAt(1);
+		} catch (IOException e) {
+			status = "Unable to read Observation sheet of template file.";
+			return;
+		}
+		try {
 
-			int noOfCellsPerRow = 0;
 			boolean isFirstRow = true;
-			for (Row dataRow : datatypeSheet) {
 
+			for (Row dataRow : dataSheet) {
+				ArrayList<String> row = new ArrayList<String>();
+				// Read row and populate it into Row
+				Util.processRow(dataRow, row);
 				if (isFirstRow) {
-					/*
-					 * As the first row is a header, the assumption is that
-					 * every column need to have a header. CellIterator skips
-					 * the cells without any format or any data. So by counting
-					 * the no of headers we are sure to handle the blank spaces.
-					 */
-					noOfCellsPerRow = dataRow.getLastCellNum();
+					// As the first row is a header, the assumption is that
 					isFirstRow = false;
 				} else {
-					ArrayList<String> row = new ArrayList<String>();
-					processDataSheet(dataRow, row, noOfCellsPerRow);
-
-					StringBuilder outputLine = new StringBuilder();
-					if (row.isEmpty())
-						break;
-					else {
-						for (FileLineEntry outputEntry : outputFormat) {
-							if (outputEntry.isIndex && outputEntry.getValue() != "-1") {
-								outputLine.append(row.get((int) Float.parseFloat(outputEntry.getValue())));
-								outputLine.append(",");
-							} else if (outputEntry.getValue() != "-1") {
-								outputLine.append(outputEntry.getValue());
-								outputLine.append(",");
-							} else {
-								outputLine.append(",");
-							}
+					String plotId = row.get(variateList.get(0).getIndexInTemplate());
+					// TODO Validate
+					if(hm.get(plotId)==null)
+						extraPlot_IdTemplate.add(plotId);
+					else{
+						ArrayList<String> dataList = hm.get(plotId);
+						hm.remove(plotId);
+						int dataListIndex = 0;
+						for (VariateEntry entry : variateList) {
+							Cell cell = dataRow.getCell(entry.getIndexInTemplate());
+							if (cell == null)
+								cell = dataRow.createCell(entry.getIndexInTemplate());
+							cell.setCellValue(dataList.get(dataListIndex++));
 						}
-						tempFileBufferedWriter.write(outputLine.toString());
-						tempFileBufferedWriter.write("\n");
 					}
 				}
 			}
-			tempFileBufferedWriter.flush();
-			tempFileBufferedWriter.close();
+			FileOutputStream outputStream = new FileOutputStream(templateFileName);
+			workbook.write(outputStream);
 			workbook.close();
-		} catch (FileNotFoundException e) {
+
 		} catch (IOException e) {
+			status = "Unable to read Observation sheet of template file.";
+			return;
 		}
-		return status;
+
+	}
+
+	private static void readFieldScorer(String fieldScorerFileName, HashMap<String, ArrayList<String>> hm,
+			ArrayList<VariateEntry> variateList) {
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(fieldScorerFileName));
+		} catch (IOException e) {
+			status = "Cannot open the fieldScorer file:" + fieldScorerFileName;
+			return;
+		}
+		String[] row = null;
+		String fileRow;
+		try {
+			boolean isFirst = true;
+			while ((fileRow = br.readLine()) != null) {
+				if (isFirst) {
+					isFirst = false;
+				} else {
+					row = fileRow.split(",", -1);
+					ArrayList<String> reqFields = new ArrayList<String>();
+					for (VariateEntry entry : variateList) {
+						if (entry.getIndexInFieldScorer() == -1) {
+							reqFields.add("");
+						} else {
+							reqFields.add(row[entry.getIndexInFieldScorer()]);
+						}
+					}
+					// Plot_ID is always at 0th location.
+					hm.put(row[variateList.get(0).getIndexInFieldScorer()], reqFields);
+				}
+			}
+			br.close();
+		} catch (IOException e) {
+			status = "Issue with reading fieldScorer file:" + fieldScorerFileName;
+			return;
+		}
 	}
 
 	private static void findIndexesInTemplate(ArrayList<VariateEntry> variateList, String templateFileName) {
@@ -112,7 +167,7 @@ public class FieldScorerToTemplateConverter {
 			status = "Cannot open the template file:" + templateFileName;
 			return;
 		}
-		Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
+		Sheet datatypeSheet = hssfWorkbook.getSheetAt(1);
 		ArrayList<String> row = new ArrayList<String>();
 		for (Row dataRow : datatypeSheet) {
 			// Read first header row and populate it into Row
@@ -121,67 +176,56 @@ public class FieldScorerToTemplateConverter {
 		}
 
 		for (int i = 0; i < row.size(); i++) {
-			
-			if(isFieldRequired(row.get(i),variateList)!= -1){
-				
+			int pos = isFieldRequired(row.get(i), variateList);
+			if (pos != -1) {
+				variateList.get(pos).setIndexInTemplate(i);
 			}
-				
 		}
-		
+		try {
+			hssfWorkbook.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-	private static void findIndexes(ArrayList<VariateEntry> variateList, String fieldScorerFileName) {
+	private static void findIndexesFromFieldScorer(ArrayList<VariateEntry> variateList, String fieldScorerFileName) {
 
-		HSSFWorkbook hssfWorkbook;
+		BufferedReader br;
 		try {
-			hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fieldScorerFileName)));
+			br = new BufferedReader(new FileReader(fieldScorerFileName));
 		} catch (IOException e) {
 			status = "Cannot open the fieldScorer file:" + fieldScorerFileName;
 			return;
 		}
-		Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
-		ArrayList<String> row = new ArrayList<String>();
-		for (Row dataRow : datatypeSheet) {
-			// Read first header row and populate it into Row
-			Util.processRow(dataRow, row);
-			break;
-		}
-
+		String[] row = null;
+		String fileRow;
 		try {
-			hssfWorkbook.close();
+			while ((fileRow = br.readLine()) != null) {
+				row = fileRow.split(",", -1);
+				break;
+			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			status = "Issue with reading fieldScorer file:" + fieldScorerFileName;
+			return;
 		}
 
-		int variatePos = 0, noOfVariate = variateList.size();
-		for (int i = 0; i < row.size(); i++) {
-			
-			isFieldRequired(row.get(i),i,variateList);
-				
-			
-			
-			
-			if (variatePos > noOfVariate) {
-				status = "No of variate entries are not same in template and fieldScorer file. \nPls check!!";
-				return;
-			} else if (row.get(i) == variateList.get(variatePos).getVariateName()) {
-				variateList.get(variatePos).setIndexInTemplate(i);
-				variatePos++;
-			} else if ((row.get(i) != variateList.get(variatePos).getVariateName()) && (variatePos > 1)) {
-				status = "No of variate entries are either not same or not in same order. \nPls check!!";
-				return;
+		// From fieldScorer.
+		for (int i = 0; i < row.length; i++) {
+			int pos = isFieldRequired(row[i], variateList);
+			if (pos != -1) {
+				variateList.get(pos).setIndexInFieldScorer(i);
 			}
 		}
-		if (variatePos <= noOfVariate) {
-			status = "No of variate entries are either not same in template and fieldScorer file. \nPls check!!";
-			return;
+		try {
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
 	private static int isFieldRequired(String string, ArrayList<VariateEntry> variateList) {
-		for(int i = 0; i < variateList.size(); i++){
-			if(variateList.get(i).getVariateName().equalsIgnoreCase(string)){
+		for (int i = 0; i < variateList.size(); i++) {
+			if (variateList.get(i).getVariateName().equalsIgnoreCase(string)) {
 				return i;
 			}
 		}
@@ -198,7 +242,6 @@ public class FieldScorerToTemplateConverter {
 	private static void indexesRequired(String templateFile, ArrayList<VariateEntry> variateList) {
 
 		final String VARIATE = "VARIATE";
-		final String FACTOR = "FACTOR";
 		// variateList.add(new VariateEntry("GenoType", -1));
 		variateList.add(new VariateEntry("PLOT_ID", -1, -1));
 		try {
@@ -207,9 +250,7 @@ public class FieldScorerToTemplateConverter {
 			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
 
 			Iterator<Row> iterator = datatypeSheet.iterator();
-			int noOfFactor = 0;
-			boolean readNext = true;
-			while (iterator.hasNext() && readNext) {
+			while (iterator.hasNext()) {
 				Row nextRow = iterator.next();
 				ArrayList<String> row = new ArrayList<String>();
 				// Read row and populate it into Row
@@ -217,7 +258,6 @@ public class FieldScorerToTemplateConverter {
 				if (!row.isEmpty()) {
 					if (row.get(0).equalsIgnoreCase(VARIATE)) {
 						processVariate(iterator, variateList);
-						readNext = false;
 						break;
 					}
 				}
@@ -227,24 +267,6 @@ public class FieldScorerToTemplateConverter {
 			status = "Could not process Description sheet of template File.\n Pls Check.";
 		}
 
-	}
-
-	private static int processFactor(Iterator<Row> iterator, ArrayList<VariateEntry> variateList) {
-		int noOfFactor = 0;
-		while (iterator.hasNext()) {
-			Row nextRow = iterator.next();
-			ArrayList<String> row = new ArrayList<String>();
-			Util.processRow(nextRow, row);
-			if (row.size() == 0) {
-				break;
-			}
-			if (row.get(0).equalsIgnoreCase("PLOT_ID")) {
-				variateList.get(0).setIndexInTemplate(noOfFactor);
-			}
-			noOfFactor++;
-		}
-
-		return noOfFactor;
 	}
 
 	/**
@@ -272,7 +294,7 @@ class VariateEntry {
 	private String variateName;
 	private int indexInTemplate;
 	private int indexInFieldScorer;
-	
+
 	public VariateEntry(String variate, int indexTemplate, int indexFieldScorer) {
 		super();
 		setVariateName(variate);
