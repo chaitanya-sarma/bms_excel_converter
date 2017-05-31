@@ -1,11 +1,7 @@
-import java.awt.CardLayout;
-import java.awt.EventQueue;
-import java.awt.Frame;
-
 import javax.swing.*;
-
-import java.awt.event.ActionListener;
+import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 
 public class BMSConverterMain extends Frame {

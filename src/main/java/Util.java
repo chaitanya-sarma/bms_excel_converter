@@ -1,19 +1,14 @@
-import java.awt.Image;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.net.URL;
 import java.util.ArrayList;
 
-import javax.swing.ImageIcon;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-
-public class Util {
-	public static void addIcrisatLogo(JLabel label) {
+class Util {
+	static void addIcrisatLogo(JLabel label) {
 		URL url = BMSConverterMain.class.getResource("/icrisat.png");
 		ImageIcon icon = new ImageIcon(
 				new ImageIcon(url).getImage().getScaledInstance(150, 50, Image.SCALE_DEFAULT));
@@ -21,7 +16,7 @@ public class Util {
 		label.setBounds(433, 292, 150, 50);
 	}
 
-	public static void addbmsLogo(JLabel label) {
+	static void addbmsLogo(JLabel label) {
 		URL url = BMSConverterMain.class.getResource("/ibp_logo.jpg");
 		ImageIcon icon = new ImageIcon(
 				new ImageIcon(url).getImage().getScaledInstance(80, 50, Image.SCALE_DEFAULT));
@@ -29,14 +24,14 @@ public class Util {
 		label.setBounds(51, 13, 72, 61);
 	}
 	
-	public static void addFileChooser(ActionEvent evt, JTextField fileName, JFrame frame) {
+	static void addFileChooser(ActionEvent evt, JTextField fileName, JFrame frame) {
 		JFileChooser fileChooser = new JFileChooser();
 		if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
 			fileName.setText(fileChooser.getSelectedFile().getAbsolutePath());
 		}
 	}
 
-	public static void clearAll(CreateTemplatePanel templatePanel, CreateFieldScorerPanel fieldScorerPanel) {
+	static void clearAll(CreateTemplatePanel templatePanel, CreateFieldScorerPanel fieldScorerPanel) {
 		templatePanel.setFieldScorerFileName().setTemplateFileName();
 		fieldScorerPanel.setInputFileName().setOutputFieldScorerFileName().setSiteName();
 	}
