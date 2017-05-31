@@ -15,16 +15,12 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
-public class FieldScorerToTemplateConverter {
+class FieldScorerToTemplateConverter {
 	private static final String FAILURE = "Failure!!";
-	private static String status = FAILURE;
+	private static String status;
 
-	public static void main(String[] args) {
-		convert("C:\\Users\\SBDM\\Documents\\Template1.xls", "C:\\Users\\SBDM\\Documents\\Field.csv");
-	}
-
-	public static String convert(String templateFileName, String fieldScorerFileName) {
-
+	static String convert(String templateFileName, String fieldScorerFileName) {
+		status = FAILURE;
 		if (!new File(templateFileName).isFile()) {
 			status = "Given template file: " + templateFileName + " is not valid.";
 			return status;
@@ -48,24 +44,24 @@ public class FieldScorerToTemplateConverter {
 		ArrayList<VariateEntry> VariateList = new ArrayList<VariateEntry>();
 
 		indexesRequired(templateFileName, VariateList);
-		if (status != FAILURE)
+		if (!status.equals(FAILURE))
 			return status;
 		findIndexesInTemplate(VariateList, templateFileName);
 		findIndexesFromFieldScorer(VariateList, fieldScorerFileName);
-		if (status != FAILURE)
+		if (!status.equals(FAILURE))
 			return status;
 		HashMap<String, ArrayList<String>> hm = new HashMap<String, ArrayList<String>>();
 		readFieldScorer(fieldScorerFileName, hm, VariateList);
 		System.out.println(hm.size());
 		ArrayList<String> extraPlot_IdTemplate = new ArrayList<String>();
 		writeToTemplateFile(templateFileName, hm, VariateList, extraPlot_IdTemplate);
-		if(!extraPlot_IdTemplate.isEmpty()){
-			status = "Missing plotid's in fieldscorer."+extraPlot_IdTemplate;
+		if (!extraPlot_IdTemplate.isEmpty()) {
+			status = "Missing plotid's in fieldscorer." + extraPlot_IdTemplate;
 		}
-		if(hm.size() > 0){
-			status = "Extra plotid's in fieldscorer."+hm.keySet();
+		if (hm.size() > 0) {
+			status = "Extra plotid's in fieldscorer." + hm.keySet();
 		}
-		if (status == FAILURE)
+		if (status.equals(FAILURE))
 			status = "SUCCESS!!";
 		return status;
 	}
@@ -73,8 +69,8 @@ public class FieldScorerToTemplateConverter {
 	private static void writeToTemplateFile(String templateFileName, HashMap<String, ArrayList<String>> hm,
 			ArrayList<VariateEntry> variateList, ArrayList<String> extraPlot_IdTemplate) {
 
-		Workbook workbook = null;
-		Sheet dataSheet = null;
+		Workbook workbook;
+		Sheet dataSheet;
 		try {
 			workbook = new HSSFWorkbook(new FileInputStream(new File(templateFileName)));
 			dataSheet = workbook.getSheetAt(1);
@@ -95,10 +91,9 @@ public class FieldScorerToTemplateConverter {
 					isFirstRow = false;
 				} else {
 					String plotId = row.get(variateList.get(0).getIndexInTemplate());
-					// TODO Validate
-					if(hm.get(plotId)==null)
+					if (hm.get(plotId) == null)
 						extraPlot_IdTemplate.add(plotId);
-					else{
+					else {
 						ArrayList<String> dataList = hm.get(plotId);
 						hm.remove(plotId);
 						int dataListIndex = 0;
@@ -117,7 +112,6 @@ public class FieldScorerToTemplateConverter {
 
 		} catch (IOException e) {
 			status = "Unable to read Observation sheet of template file.";
-			return;
 		}
 
 	}
@@ -131,7 +125,7 @@ public class FieldScorerToTemplateConverter {
 			status = "Cannot open the fieldScorer file:" + fieldScorerFileName;
 			return;
 		}
-		String[] row = null;
+		String[] row;
 		String fileRow;
 		try {
 			boolean isFirst = true;
@@ -155,7 +149,6 @@ public class FieldScorerToTemplateConverter {
 			br.close();
 		} catch (IOException e) {
 			status = "Issue with reading fieldScorer file:" + fieldScorerFileName;
-			return;
 		}
 	}
 
@@ -167,13 +160,9 @@ public class FieldScorerToTemplateConverter {
 			status = "Cannot open the template file:" + templateFileName;
 			return;
 		}
-		Sheet datatypeSheet = hssfWorkbook.getSheetAt(1);
+		Sheet dataSheet = hssfWorkbook.getSheetAt(1);
 		ArrayList<String> row = new ArrayList<String>();
-		for (Row dataRow : datatypeSheet) {
-			// Read first header row and populate it into Row
-			Util.processRow(dataRow, row);
-			break;
-		}
+		Util.processRow(dataSheet.getRow(0), row);
 
 		for (int i = 0; i < row.size(); i++) {
 			int pos = isFieldRequired(row.get(i), variateList);
@@ -197,13 +186,16 @@ public class FieldScorerToTemplateConverter {
 			status = "Cannot open the fieldScorer file:" + fieldScorerFileName;
 			return;
 		}
-		String[] row = null;
+		String[] row;
 		String fileRow;
 		try {
-			while ((fileRow = br.readLine()) != null) {
-				row = fileRow.split(",", -1);
-				break;
-			}
+
+			if ((fileRow = br.readLine()) != null) row = fileRow.split(",", -1);
+			else {
+                status = "Issue with reading fieldScorer file:" + fieldScorerFileName;
+                br.close();
+                return;
+            }
 		} catch (IOException e) {
 			status = "Issue with reading fieldScorer file:" + fieldScorerFileName;
 			return;
@@ -236,8 +228,6 @@ public class FieldScorerToTemplateConverter {
 	 * Process sheet 1. Read complete sheet to identify the required
 	 * information.
 	 * 
-	 * @param fileName
-	 * @param variateList
 	 */
 	private static void indexesRequired(String templateFile, ArrayList<VariateEntry> variateList) {
 
@@ -247,9 +237,9 @@ public class FieldScorerToTemplateConverter {
 		try {
 
 			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(templateFile)));
-			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
+			Sheet dataSheet = hssfWorkbook.getSheetAt(0);
 
-			Iterator<Row> iterator = datatypeSheet.iterator();
+			Iterator<Row> iterator = dataSheet.iterator();
 			while (iterator.hasNext()) {
 				Row nextRow = iterator.next();
 				ArrayList<String> row = new ArrayList<String>();
@@ -272,9 +262,6 @@ public class FieldScorerToTemplateConverter {
 	/**
 	 * Process the variate from sheet 1 of template.
 	 * 
-	 * @param iterator
-	 * @param outputFormat
-	 * @param factorColumnsNum
 	 */
 	private static void processVariate(Iterator<Row> iterator, ArrayList<VariateEntry> variateList) {
 		while (iterator.hasNext()) {
@@ -295,34 +282,34 @@ class VariateEntry {
 	private int indexInTemplate;
 	private int indexInFieldScorer;
 
-	public VariateEntry(String variate, int indexTemplate, int indexFieldScorer) {
+	VariateEntry(String variate, int indexTemplate, int indexFieldScorer) {
 		super();
 		setVariateName(variate);
 		setIndexInTemplate(indexTemplate);
 		setIndexInFieldScorer(indexFieldScorer);
 	}
 
-	public int getIndexInFieldScorer() {
+	int getIndexInFieldScorer() {
 		return indexInFieldScorer;
 	}
 
-	public void setIndexInFieldScorer(int indexInFieldScorer) {
+	void setIndexInFieldScorer(int indexInFieldScorer) {
 		this.indexInFieldScorer = indexInFieldScorer;
 	}
 
-	public String getVariateName() {
+	String getVariateName() {
 		return variateName;
 	}
 
-	public void setVariateName(String variate) {
+	private void setVariateName(String variate) {
 		this.variateName = variate;
 	}
 
-	public int getIndexInTemplate() {
+	int getIndexInTemplate() {
 		return indexInTemplate;
 	}
 
-	public void setIndexInTemplate(int indexInTemplate) {
+	void setIndexInTemplate(int indexInTemplate) {
 		this.indexInTemplate = indexInTemplate;
 	}
 

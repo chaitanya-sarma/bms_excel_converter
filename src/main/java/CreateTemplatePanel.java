@@ -10,23 +10,21 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-public class CreateTemplatePanel {
+class CreateTemplatePanel {
 
-	private JLabel lblFileConverter, lblTemplateFile, lblFieldScorerFile;
 	private JTextField templateFileName, fieldScorerFileName;
 
-	public CreateTemplatePanel setTemplateFileName(String templateFileName) {
-		this.templateFileName.setText(templateFileName);
-		return this;
+	void setTemplateFileName() {
+		this.templateFileName.setText(null);
 	}
 
-	public CreateTemplatePanel setFieldScorerFileName(String fieldScorerFileName) {
-		this.fieldScorerFileName.setText(fieldScorerFileName);
+	CreateTemplatePanel setFieldScorerFileName() {
+		this.fieldScorerFileName.setText(null);
 		return this;
 	}
 
 	/**
-	 * @wbp.parser.entryPoint
+	 * Created panel.
 	 */
 	void setToTemplatePanel(JPanel toTemplate, final JFrame frame) {
 		JLabel icrisatLogoLabel = new JLabel("");
@@ -37,13 +35,13 @@ public class CreateTemplatePanel {
 		toTemplate.add(ibpLogoLabel);
 		Util.addbmsLogo(ibpLogoLabel);
 
-		lblFileConverter = new JLabel("FieldScorer to Template");
+		JLabel lblFileConverter = new JLabel("FieldScorer to Template");
 		lblFileConverter.setFont(new Font("Tahoma", Font.BOLD, 25));
 		lblFileConverter.setForeground(Color.BLUE);
 		lblFileConverter.setBounds(135, 25, 313, 44);
 		toTemplate.add(lblFileConverter);
 
-		lblTemplateFile = new JLabel("Template File");
+		JLabel lblTemplateFile = new JLabel("Template File");
 		lblTemplateFile.setFont(new Font("Arial", Font.BOLD, 15));
 		lblTemplateFile.setBounds(12, 124, 98, 20);
 		toTemplate.add(lblTemplateFile);
@@ -53,7 +51,7 @@ public class CreateTemplatePanel {
 		toTemplate.add(templateFileName);
 		templateFileName.setColumns(10);
 
-		lblFieldScorerFile = new JLabel("Field Scorer");
+		JLabel lblFieldScorerFile = new JLabel("Field Scorer");
 		lblFieldScorerFile.setFont(new Font("Arial", Font.BOLD, 15));
 		lblFieldScorerFile.setBounds(12, 157, 98, 16);
 		toTemplate.add(lblFieldScorerFile);
@@ -67,7 +65,7 @@ public class CreateTemplatePanel {
 		btnTemplateFileBrowse.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 
-				Util.addFileChooser(arg0, templateFileName, frame);
+				Util.addFileChooser(arg0,templateFileName, frame);
 			}
 		});
 		btnTemplateFileBrowse.setBounds(485, 120, 89, 23);
@@ -77,7 +75,7 @@ public class CreateTemplatePanel {
 		btnFieldScorerFileBrowse.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 
-				Util.addFileChooser(arg0, fieldScorerFileName, frame);
+				Util.addFileChooser(arg0,fieldScorerFileName, frame);
 			}
 		});
 		btnFieldScorerFileBrowse.setBounds(485, 155, 89, 23);

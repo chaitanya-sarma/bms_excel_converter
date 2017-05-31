@@ -37,8 +37,8 @@ public class Util {
 	}
 
 	public static void clearAll(CreateTemplatePanel templatePanel, CreateFieldScorerPanel fieldScorerPanel) {
-		templatePanel.setFieldScorerFileName(null).setTemplateFileName(null);
-		fieldScorerPanel.setInputFileName(null).setOutputFieldScorerFileName(null).setSiteName(null);
+		templatePanel.setFieldScorerFileName().setTemplateFileName();
+		fieldScorerPanel.setInputFileName().setOutputFieldScorerFileName().setSiteName();
 	}
 
 	/*

@@ -13,11 +13,12 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
-public class TemplateToFieldScorerConverter {
+class TemplateToFieldScorerConverter {
 	private static final String FAILURE = "Failure!!";
-	private static String status = FAILURE;
+	private static String status;
 	
-	public static String convert(String inputFileName, String outputFileName, int year, String siteName) {
+	static String convert(String inputFileName, String outputFileName, int year, String siteName) {
+		status = FAILURE;
 		if (!new File(inputFileName).isFile()) {
 			status = "Given input file: " + inputFileName + " is not valid.";
 			return status;
@@ -45,19 +46,19 @@ public class TemplateToFieldScorerConverter {
 		outputFormat.add(new FileLineEntry("SiteName", false, siteName));
 
 		prepareOutputLineFormat(inputFileName, outputFormat);
-		if(status != FAILURE)return status;
+		if(!status.equals(FAILURE))return status;
 		try {
 			BufferedWriter tempFileBufferedWriter = new BufferedWriter(new FileWriter(outputFileName));
 			writeHeader(outputFormat, tempFileBufferedWriter);
-			if(status != FAILURE)return status;
+			if(!status.equals(FAILURE))return status;
 			
 			// Write rest of lines
 			Workbook workbook = new HSSFWorkbook(new FileInputStream(new File(inputFileName)));
-			Sheet datatypeSheet = workbook.getSheetAt(1);
+			Sheet dataSheet = workbook.getSheetAt(1);
 	
 			int noOfCellsPerRow = 0;
 			boolean isFirstRow = true;
-			for(Row dataRow : datatypeSheet) {
+			for(Row dataRow : dataSheet) {
 				
 				if(isFirstRow){
 					/*
@@ -77,10 +78,10 @@ public class TemplateToFieldScorerConverter {
 						break;
 					else {
 						for (FileLineEntry outputEntry : outputFormat) {
-							if (outputEntry.isIndex && outputEntry.getValue() != "-1") {	
+							if (outputEntry.isIndex && !outputEntry.getValue().equals("-1")) {
 								outputLine.append(row.get((int) Float.parseFloat(outputEntry.getValue())));
 								outputLine.append(",");
-							} else if (outputEntry.getValue() != "-1") {
+							} else if (!outputEntry.getValue().equals("-1")) {
 								outputLine.append(outputEntry.getValue());
 								outputLine.append(",");
 							} else {
@@ -153,8 +154,6 @@ public class TemplateToFieldScorerConverter {
 	 * Process sheet 1.
 	 * Read complete sheet to identify the required information.
 	 * 
-	 * @param fileName
-	 * @param outputFormat
 	 */
 	private static void prepareOutputLineFormat(String fileName, ArrayList<FileLineEntry> outputFormat) {
 		try {
@@ -177,9 +176,9 @@ public class TemplateToFieldScorerConverter {
 			outputFormat.add(new FileLineEntry("PLOT_ID", true, "-1"));//11
 
 			HSSFWorkbook hssfWorkbook = new HSSFWorkbook(new FileInputStream(new File(fileName)));
-			Sheet datatypeSheet = hssfWorkbook.getSheetAt(0);
+			Sheet dataSheet = hssfWorkbook.getSheetAt(0);
 
-			Iterator<Row> iterator = datatypeSheet.iterator();
+			Iterator<Row> iterator = dataSheet.iterator();
 
 			int factorColumnsNum = 0;
 			while (iterator.hasNext()) {
@@ -216,9 +215,6 @@ public class TemplateToFieldScorerConverter {
 	/**
 	 * Process the variate from sheet 1.
 	 * 
-	 * @param iterator
-	 * @param outputFormat
-	 * @param factorColumnsNum
 	 */
 	private static void processVariate(Iterator<Row> iterator, ArrayList<FileLineEntry> outputFormat,
 			int factorColumnsNum) {
@@ -237,9 +233,6 @@ public class TemplateToFieldScorerConverter {
 	/**
 	 * Read the Factor data from sheet 1.
 	 * 
-	 * @param iterator
-	 * @param outputFormat
-	 * @return
 	 */
 	private static int processFactor(Iterator<Row> iterator, ArrayList<FileLineEntry> outputFormat) {
 		ArrayList<String> requiredFieldsFromFactor = new ArrayList<String>();
@@ -289,38 +282,26 @@ public class TemplateToFieldScorerConverter {
 }
 
 class FileLineEntry {
-	String entryName;
+	private String entryName;
 	boolean isIndex;
-	String value;
+	private String value;
 
-	public FileLineEntry(String entryName, boolean isIndex, String value) {
+	FileLineEntry(String entryName, boolean isIndex, String value) {
 		super();
 		this.entryName = entryName;
 		this.isIndex = isIndex;
 		this.value = value;
 	}
 
-	public String getEntryName() {
+	String getEntryName() {
 		return entryName;
 	}
 
-	public void setEntryName(String entryName) {
-		this.entryName = entryName;
-	}
-
-	public boolean isIndex() {
-		return isIndex;
-	}
-
-	public void setIndex(boolean isIndex) {
-		this.isIndex = isIndex;
-	}
-
-	public String getValue() {
+	String getValue() {
 		return value;
 	}
 
-	public void setValue(String value) {
+	void setValue(String value) {
 		this.value = value;
 	}
 

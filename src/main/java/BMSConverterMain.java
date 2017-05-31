@@ -2,9 +2,7 @@ import java.awt.CardLayout;
 import java.awt.EventQueue;
 import java.awt.Frame;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JButton;
+import javax.swing.*;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -36,7 +34,7 @@ public class BMSConverterMain extends Frame {
 	/**
 	 * Create the application.
 	 */
-	public BMSConverterMain() {
+	private BMSConverterMain() {
 		initialize();
 	}
 
@@ -46,7 +44,7 @@ public class BMSConverterMain extends Frame {
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 800, 400);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new CardLayout(0, 0));
 		
 		JPanel mainPanel = new JPanel();
