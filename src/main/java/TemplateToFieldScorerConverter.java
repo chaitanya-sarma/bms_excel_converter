@@ -232,7 +232,7 @@ class TemplateToFieldScorerConverter {
 	private static int processFactor(Iterator<Row> iterator, ArrayList<FileLineEntry> outputFormat) {
 		ArrayList<String> requiredFieldsFromFactor = new ArrayList<String>();
 		requiredFieldsFromFactor.add("PLOT_NO");
-		requiredFieldsFromFactor.add("Rep");
+		requiredFieldsFromFactor.add("REP_NO");
 		requiredFieldsFromFactor.add("DESIGNATION");
 		requiredFieldsFromFactor.add("CROSS");
 		requiredFieldsFromFactor.add("ENTRY_TYPE");
