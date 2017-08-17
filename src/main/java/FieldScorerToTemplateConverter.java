@@ -68,11 +68,6 @@ class FieldScorerToTemplateConverter {
 		try {
 			workbook = new HSSFWorkbook(new FileInputStream(new File(templateFileName)));
 			dataSheet = workbook.getSheetAt(1);
-		} catch (IOException e) {
-			status = "Unable to read Observation sheet of template file.";
-			return;
-		}
-		try {
 
 			boolean isFirstRow = true;
 
@@ -102,12 +97,12 @@ class FieldScorerToTemplateConverter {
 			}
 			FileOutputStream outputStream = new FileOutputStream(templateFileName);
 			workbook.write(outputStream);
+			outputStream.close();
 			workbook.close();
 
 		} catch (IOException e) {
 			status = "Unable to read Observation sheet of template file.";
 		}
-
 	}
 
 	private static void readFieldScorer(String fieldScorerFileName, HashMap<String, ArrayList<String>> hm,

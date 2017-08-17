@@ -98,9 +98,9 @@ class CreateFieldScorerPanel {
 			public void actionPerformed(ActionEvent arg0) {
 
 				Util.addFileChooser(arg0, inputFileName, frame);
-				String name = JOptionPane.showInputDialog(frame, "What is output file name?",
-						inputFileName.getText().substring(0, inputFileName.getText().lastIndexOf(".")) + "_processed"
-								+ ".csv");
+				String name =inputFileName.getText().substring(0, inputFileName.getText().lastIndexOf(".")) + "_processed"
+						+ ".csv"; 
+						JOptionPane.showMessageDialog(frame, "Field-Scorer file name"+"\n"+name);
 				outputFieldScorerFileName.setText(name);
 			}
 		});
